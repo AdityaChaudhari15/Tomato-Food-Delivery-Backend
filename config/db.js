@@ -2,12 +2,6 @@ import 'dotenv/config'
 import mongoose from "mongoose"
 import dns from 'node:dns'
 
-const MONGO_URL = process.env.MONGO_URL
-
-if (!MONGO_URL) {
-  throw new Error("Please define the MONGO_URL environment variable")
-}
-
 // Global cache (important for serverless)
 let cached = global.mongoose
 
@@ -16,6 +10,11 @@ if (!cached) {
 }
 
 const connectWithDnsFallback = async () => {
+  const MONGO_URL = process.env.MONGO_URL
+  if (!MONGO_URL) {
+    throw new Error("Please define the MONGO_URL environment variable")
+  }
+
   const options = {
     bufferCommands: false,
     serverSelectionTimeoutMS: 10000,
@@ -28,7 +27,7 @@ const connectWithDnsFallback = async () => {
     const dnsErrors = ["querySrv", "ENOTFOUND", "ECONNREFUSED", "ENODATA"]
     if (dnsErrors.includes(error.syscall) || dnsErrors.includes(error.code)) {
       console.warn("MongoDB SRV DNS lookup failed; retrying with public DNS servers.")
-      dns.setServers(["8.8.8.8", "1.1.1.1"]);
+      dns.setServers(["8.8.8.8", "1.1.1.1"])
       return await mongoose.connect(MONGO_URL, options)
     }
     throw error

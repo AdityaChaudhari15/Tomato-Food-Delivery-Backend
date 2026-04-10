@@ -26,8 +26,12 @@ const connectDatabase = async () => {
 
 // middleware to ensure DB connection before every request
 app.use(async (req, res, next) => {
-  await connectDatabase()
-  next()
+  try {
+    await connectDatabase()
+    next()
+  } catch (error) {
+    next(error)
+  }
 })
 
 // routes
@@ -36,13 +40,20 @@ app.use("/api/food", foodRouter)
 app.use("/api/cart", cartRouter)
 app.use("/api/order", orderRouter)
 
-// REMOVE THIS IN PRODUCTION (Vercel doesn't support local file storage well)
-// app.use("/images", express.static("uploads"))
+// Serve local uploads only in development for backward compatibility.
+// New uploads now use Cloudinary and return full image URLs.
+// if (process.env.NODE_ENV !== "production") {
+//   app.use("/images", express.static("uploads"))
+// }
 
 // test route
 app.get("/", (req, res) => {
   res.send("API Working ")
 })
-
+// global error handler
+app.use((error, req, res, next) => {
+  console.error("Unhandled error:", error)
+  res.status(500).json({ error: error.message || "Internal Server Error" })
+})
 // EXPORT instead of listen
 export default app
