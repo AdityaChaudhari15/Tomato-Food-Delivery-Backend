@@ -1,33 +1,48 @@
-import express  from "express"
-import cors from 'cors'
+import 'dotenv/config'
+import express from "express"
+import cors from "cors"
 import { connectDB } from "./config/db.js"
 import userRouter from "./routes/userRoute.js"
 import foodRouter from "./routes/foodRoute.js"
-import 'dotenv/config'
 import cartRouter from "./routes/cartRoute.js"
 import orderRouter from "./routes/orderRoute.js"
 
-// app config
 const app = express()
-const port = 8000
 
-
-// middlewares
+// middleware
 app.use(express.json())
 app.use(cors())
 
-// db connection
-connectDB()
+// cache DB connection (serverless optimization)
+let isConnected = false
 
-// api endpoints
+const connectDatabase = async () => {
+  if (!isConnected) {
+    await connectDB()
+    isConnected = true
+    console.log("DB Connected")
+  }
+}
+
+// middleware to ensure DB connection before every request
+app.use(async (req, res, next) => {
+  await connectDatabase()
+  next()
+})
+
+// routes
 app.use("/api/user", userRouter)
 app.use("/api/food", foodRouter)
-app.use("/images",express.static('uploads'))
 app.use("/api/cart", cartRouter)
-app.use("/api/order",orderRouter)
+app.use("/api/order", orderRouter)
 
+// REMOVE THIS IN PRODUCTION (Vercel doesn't support local file storage well)
+// app.use("/images", express.static("uploads"))
+
+// test route
 app.get("/", (req, res) => {
-    res.send("API Working")
-  });
+  res.send("API Working ")
+})
 
-app.listen(port, () => console.log(`Server started on http://localhost:${port}`))
+// EXPORT instead of listen
+export default app
